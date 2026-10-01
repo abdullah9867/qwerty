@@ -1,0 +1,340 @@
+from pathlib import Path
+
+code = r'''from reportlab.lib import colors
+from reportlab.lib.pagesizes import landscape, A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+
+OUT = "Food_Delivery_Intelligence_AI_Dashboard.pdf"
+
+W, H = landscape(A4)
+bg = colors.HexColor("#050914")
+panel = colors.HexColor("#091222")
+line = colors.HexColor("#18314d")
+cyan = colors.HexColor("#12c8ff")
+blue = colors.HexColor("#2d7fff")
+red = colors.HexColor("#ff3b58")
+amber = colors.HexColor("#ffc84a")
+green = colors.HexColor("#20e0a2")
+textc = colors.HexColor("#e8f3ff")
+muted = colors.HexColor("#7e94ad")
+
+c = canvas.Canvas(OUT, pagesize=(W, H))
+
+def rect(x, y, w, h, fill=panel, stroke=line, r=6):
+    c.setFillColor(fill)
+    c.setStrokeColor(stroke)
+    c.setLineWidth(.6)
+    c.roundRect(x, y, w, h, r, fill=1, stroke=1)
+
+def txt(x, y, s, size=8, color=textc, bold=False):
+    c.setFillColor(color)
+    c.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+    c.drawString(x, y, str(s))
+
+def title(x, y, eyebrow, heading):
+    txt(x, y + 12, eyebrow, 6, muted)
+    txt(x, y, heading, 10, textc, True)
+
+# ---------- PAGE 1: CONTROL TOWER ----------
+c.setFillColor(bg)
+c.rect(0, 0, W, H, fill=1, stroke=0)
+
+margin = 18 * mm
+gap = 3 * mm
+
+txt(margin, H - 12*mm, "fooddelivery / intelligence", 14, textc, True)
+txt(margin, H - 16.5*mm,
+    "OPERATIONS CONTROL TOWER · AI DATA ANALYTICS & DEMAND FORECASTING",
+    6, muted)
+
+# KPI cards
+top = H - 27*mm
+kw = (W - 2*margin - 4*gap) / 5
+
+kpis = [
+    ("TOTAL ORDERS", "12,480", "filtered order volume"),
+    ("REVENUE", "₹1.03 Cr", "gross order revenue"),
+    ("AVG ORDER VALUE", "₹825", "per order"),
+    ("AVG DELIVERY", "28.1 min", "service speed"),
+    ("CUSTOMER RATING", "4.30/5", "customer experience"),
+]
+
+for i, (label, value, sub) in enumerate(kpis):
+    x = margin + i * (kw + gap)
+    rect(x, top - 23*mm, kw, 20*mm)
+    txt(x + 4*mm, top - 8*mm, label, 6, muted, True)
+    txt(x + 4*mm, top - 14.5*mm, value, 15, textc, True)
+    txt(x + 4*mm, top - 19*mm, sub, 6, muted)
+
+# Upper visual panels
+py = top - 75*mm
+pw1 = (W - 2*margin - 2*gap) * .39
+pw2 = (W - 2*margin - 2*gap) * .29
+pw3 = (W - 2*margin - 2*gap) - pw1 - pw2 - 2*gap
+
+rect(margin, py, pw1, 48*mm)
+rect(margin + pw1 + gap, py, pw2, 48*mm)
+rect(margin + pw1 + pw2 + 2*gap, py, pw3, 48*mm)
+
+title(margin + 4*mm, py + 41*mm,
+      "GEOSPATIAL INTELLIGENCE", "Revenue Geography · India")
+title(margin + pw1 + gap + 4*mm, py + 41*mm,
+      "DEMAND PULSE", "Orders Trend")
+title(margin + pw1 + pw2 + 2*gap + 4*mm, py + 41*mm,
+      "MARKET MIX", "Category Revenue")
+
+# Stylized India map
+mx, my = margin + 8*mm, py + 7*mm
+mw, mh = pw1 - 16*mm, 32*mm
+c.setFillColor(colors.HexColor("#071321"))
+c.roundRect(mx, my, mw, mh, 5, fill=1, stroke=0)
+
+pts = [
+    (.50,.94),(.60,.86),(.69,.72),(.79,.58),(.72,.46),
+    (.83,.34),(.68,.24),(.57,.06),(.47,.29),(.37,.43),
+    (.25,.54),(.31,.69),(.27,.82),(.40,.87)
+]
+p = c.beginPath()
+p.moveTo(mx + pts[0][0]*mw, my + pts[0][1]*mh)
+for xx, yy in pts[1:]:
+    p.lineTo(mx + xx*mw, my + yy*mh)
+p.close()
+c.setFillColor(colors.HexColor("#0b2030"))
+c.setStrokeColor(colors.HexColor("#1e5875"))
+c.drawPath(p, fill=1, stroke=1)
+
+cities = {
+    "Delhi": (.53,.73),
+    "Mumbai": (.38,.43),
+    "Pune": (.43,.46),
+    "Hyderabad": (.58,.43),
+    "Bangalore": (.51,.20)
+}
+
+for name, (xx, yy) in cities.items():
+    c.setFillColor(cyan)
+    c.circle(mx + xx*mw, my + yy*mh, 2.3, fill=1, stroke=0)
+    txt(mx + xx*mw + 4, my + yy*mh - 2, name, 5, muted)
+
+# Orders trend
+tx, ty = margin + pw1 + gap + 7*mm, py + 9*mm
+tw, th = pw2 - 14*mm, 27*mm
+vals = [1850, 1980, 2010, 2160, 2210, 2270]
+
+c.setStrokeColor(colors.HexColor("#102239"))
+for i in range(5):
+    yy = ty + i*th/5
+    c.line(tx, yy, tx + tw, yy)
+
+c.setStrokeColor(cyan)
+c.setLineWidth(1.5)
+p = c.beginPath()
+
+for i, v in enumerate(vals):
+    xx = tx + i*tw/(len(vals)-1)
+    yy = ty + (v - 1800)/500*th
+    if i == 0:
+        p.moveTo(xx, yy)
+    else:
+        p.lineTo(xx, yy)
+
+c.drawPath(p)
+
+# Category donut
+cx = margin + pw1 + pw2 + 2*gap + pw3/2
+cy = py + 25*mm
+segments = [2850000, 2250000, 1950000, 1900000, 1346000]
+cols = [cyan, blue, red, amber, green]
+total = sum(segments)
+start = 90
+
+for val, col in zip(segments, cols):
+    ang = val / total * 360
+    c.setFillColor(col)
+    c.wedge(cx-22, cy-22, cx+22, cy+22,
+            start, start+ang, fill=1, stroke=0)
+    start += ang
+
+c.setFillColor(panel)
+c.circle(cx, cy, 13, fill=1, stroke=0)
+txt(cx-10, cy-2, "₹10.35M", 7, textc, True)
+
+# Lower panels
+py2 = py - 53*mm
+wtotal = W - 2*margin - 2*gap
+w1 = wtotal * .39
+w2 = wtotal * .29
+w3 = wtotal - w1 - w2
+
+x1 = margin
+for x, w in [
+    (x1, w1),
+    (x1 + w1 + gap, w2),
+    (x1 + w1 + w2 + 2*gap, w3)
+]:
+    rect(x, py2, w, 43*mm)
+
+title(x1+4*mm, py2+36*mm,
+      "COMMERCIAL PERFORMANCE", "Revenue by City")
+title(x1+w1+gap+4*mm, py2+36*mm,
+      "RESTAURANT LEADERBOARD", "Top Restaurants")
+title(x1+w1+w2+2*gap+4*mm, py2+36*mm,
+      "FORWARD-LOOKING", "ARIMA · 30-Day Demand Forecast")
+
+# Revenue by city
+city_values = {
+    "Delhi": 2600000,
+    "Mumbai": 2350000,
+    "Pune": 1900000,
+    "Hyderabad": 1750000,
+    "Bangalore": 1696000
+}
+maxv = max(city_values.values())
+
+for i, (name, value) in enumerate(city_values.items()):
+    yy = py2 + 27*mm - i*5.2*mm
+    txt(x1+4*mm, yy, name, 6, muted)
+    c.setFillColor(colors.HexColor("#102338"))
+    c.roundRect(x1+24*mm, yy-1, w1-37*mm, 2.5, 1, fill=1, stroke=0)
+    c.setFillColor(cyan)
+    c.roundRect(
+        x1+24*mm, yy-1,
+        (w1-37*mm)*value/maxv,
+        2.5, 1, fill=1, stroke=0
+    )
+
+# Restaurant leaderboard
+restaurants = [
+    ("Spice Hub", 2780),
+    ("Urban Tadka", 2510),
+    ("Food Factory", 2370),
+    ("Royal Biryani", 2210),
+    ("Pizza Point", 1980)
+]
+
+for i, (name, value) in enumerate(restaurants):
+    yy = py2 + 27*mm - i*5.2*mm
+    txt(x1+w1+gap+4*mm, yy, f"0{i+1}", 6, muted, True)
+    txt(x1+w1+gap+12*mm, yy, name, 6, textc)
+    txt(x1+w1+gap+w2-18*mm, yy, f"{value:,}", 6, muted)
+
+# Forecast
+fx = x1+w1+w2+2*gap+7*mm
+fy = py2+9*mm
+fw = w3-14*mm
+fh = 25*mm
+
+forecast = [610, 625, 632, 646, 658, 671, 680]
+c.setStrokeColor(colors.HexColor("#102239"))
+c.line(fx, fy, fx+fw, fy)
+c.setStrokeColor(amber)
+c.setLineWidth(1.5)
+
+p = c.beginPath()
+for i, value in enumerate(forecast):
+    xx = fx + i*fw/(len(forecast)-1)
+    yy = fy + (value-590)/100*fh
+    if i == 0:
+        p.moveTo(xx, yy)
+    else:
+        p.lineTo(xx, yy)
+c.drawPath(p)
+
+txt(fx, fy-5*mm, "~610", 5, muted)
+txt(fx+fw-15*mm, fy-5*mm, "~680", 5, muted)
+
+# AI analyst preview
+ai_y, ai_h = 15*mm, 27*mm
+rect(margin, ai_y, W-2*margin, ai_h,
+     colors.HexColor("#071523"), colors.HexColor("#20506b"))
+
+txt(margin+5*mm, ai_y+20*mm, "✦ AI ANALYST", 8, cyan, True)
+txt(margin+5*mm, ai_y+14*mm,
+    "Context-aware dashboard assistant", 6, muted)
+
+txt(margin+52*mm, ai_y+20*mm,
+    "EXECUTIVE READOUT", 6, muted, True)
+txt(margin+52*mm, ai_y+14*mm,
+    "12,480 selected orders generate ₹1.03 Cr revenue with ₹825 AOV.",
+    7, textc)
+txt(margin+52*mm, ai_y+8*mm,
+    "Delhi leads revenue; Biryani is the strongest category; average delivery is 28.1 min.",
+    7, textc)
+txt(margin+52*mm, ai_y+2*mm,
+    "ARIMA forecast trends from ~610 to ~680 orders/day across the 30-day horizon.",
+    7, textc)
+
+# ---------- PAGE 2: AI / PROJECT PROPOSITION ----------
+c.showPage()
+c.setFillColor(bg)
+c.rect(0, 0, W, H, fill=1, stroke=0)
+
+txt(18*mm, H-15*mm,
+    "FoodDelivery Intelligence / AI Analyst", 16, textc, True)
+txt(18*mm, H-21*mm,
+    "CHATBOT ANALYSIS & PROJECT PROPOSITION", 7, muted)
+
+rect(18*mm, H-95*mm, W-36*mm, 57*mm)
+title(24*mm, H-55*mm,
+      "AI CAPABILITIES", "What the dashboard assistant analyses")
+
+items = [
+    "Revenue, total orders and average order value",
+    "City and geographic performance",
+    "Food-category demand and revenue contribution",
+    "Restaurant order-volume leaderboard",
+    "Delivery-time and operational bottlenecks",
+    "Customer rating and service experience",
+    "ARIMA 30-day demand forecast",
+    "Management recommendations based on the selected dashboard view"
+]
+
+for i, item in enumerate(items):
+    col = 0 if i < 4 else 1
+    row = i if i < 4 else i-4
+    txt(
+        25*mm + col*88*mm,
+        H-67*mm - row*9*mm,
+        "• " + item,
+        7, textc
+    )
+
+rect(18*mm, 35*mm, W-36*mm, 55*mm)
+title(24*mm, 80*mm,
+      "UNIQUE PROPOSITION", "Traceable decision intelligence")
+
+txt(24*mm, 69*mm,
+    "The project connects the complete decision chain:", 9, textc, True)
+
+chain = [
+    "ORDER-LEVEL DATA",
+    "BUSINESS KPIs",
+    "OPERATIONAL INSIGHTS",
+    "ARIMA FORECAST",
+    "MANAGEMENT ACTION"
+]
+
+for i, item in enumerate(chain):
+    x = 24*mm + i*34*mm
+    rect(x, 48*mm, 30*mm, 13*mm,
+         colors.HexColor("#081c2b"),
+         colors.HexColor("#1c5675"))
+    txt(x+2*mm, 53*mm, item, 5, cyan, True)
+    if i < 4:
+        txt(x+30.5*mm, 53*mm, "→", 8, muted, True)
+
+txt(
+    24*mm, 40*mm,
+    "The AI assistant responds to the current dashboard selection, "
+    "making the analysis interactive rather than a static chart report.",
+    7, muted
+)
+
+c.save()
+print("Created:", OUT)
+'''
+
+path = Path("/mnt/data/Food_Delivery_Intelligence_AI_Dashboard.py")
+path.write_text(code, encoding="utf-8")
+print(path)
